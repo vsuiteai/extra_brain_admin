@@ -1,0 +1,176 @@
+import bcrypt from 'bcryptjs';
+import speakeasy from 'speakeasy';
+import QRCode from 'qrcode';
+import { Firestore } from '@google-cloud/firestore';
+
+const firestore = new Firestore();
+
+const login = async (req, reply) => {
+  const { email, password, token } = req.body;
+
+  const userDoc = await firestore.collection('users')
+    .where('email', '==', email)
+    .limit(1)
+    .get();
+  if (userDoc.empty) return reply.code(401).send({ error: 'Invalid email or password' });
+
+  const user = userDoc.docs[0].data();
+  const isValid = await bcrypt.compare(password, user.password);
+  if (!isValid) return reply.code(401).send({ error: 'Invalid email or password' });
+
+  if (user.twoFAEnabled) {
+    if (!token) return reply.code(400).send({ error: '2FA token required' });
+
+    const valid2FA = speakeasy.totp.verify({
+      secret: user.twoFASecret,
+      encoding: 'base32',
+      token,
+      window: 1,
+    });
+
+    if (!valid2FA) return reply.code(401).send({ error: 'Invalid 2FA token' });
+  }
+
+  const { accessToken, refreshToken } = req.server.generateTokens({ ...user });
+
+  // Persist refresh token (could be array for multi-device support)
+  await firestore.collection('users').doc(userDoc.docs[0].id).update({
+    refreshTokens: [...(user.refreshTokens || []), refreshToken],
+  });
+
+  return { ...user, accessToken, refreshToken };
+}
+
+const twoFASetup = async (req, reply) => {
+  const { email } = req.body;
+  if (!email) return reply.code(400).send({ error: 'Email required' });
+
+  const secret = speakeasy.generateSecret({
+    name: `Vsuite (${email})`,
+    length: 20,
+  });
+
+  // Save secret in Firestore (associate with user)
+  const userDoc = await firestore.collection('users')
+    .where('email', '==', email)
+    .limit(1)
+    .get();
+  await firestore.collection('users').doc(userDoc.docs[0].id).update({ twoFASecret: secret.base32 });
+
+  // Generate QR code for authenticator apps
+  const responseUrl = await QRCode.toDataURL(secret.otpauth_url);
+
+  return { qrCodeUrl: responseUrl };
+}
+
+const twoFAVerify = async (req, reply) => {
+  const { email, token } = req.body;
+  if (!email || !token) return reply.code(400).send({ error: 'Email and token required' });
+
+  const userDoc = await firestore.collection('users')
+    .where('email', '==', email)
+    .limit(1)
+    .get();
+  if (userDoc.empty) return reply.code(404).send({ error: 'User not found' });
+
+  const { twoFASecret } = userDoc.docs[0].data();
+
+  const verified = speakeasy.totp.verify({
+    secret: twoFASecret,
+    encoding: 'base32',
+    token,
+    window: 1, // allow small clock drift
+  });
+
+  if (!verified) return reply.code(400).send({ error: 'Invalid token' });
+
+  // Mark 2FA as enabled
+  await firestore.collection('users').doc(userDoc.docs[0].id).update({ twoFAEnabled: true });
+
+  return { success: true, message: '2FA enabled successfully' };
+}
+
+const refreshTokens = (app) => async (req, reply) => {
+  const { refreshToken } = req.body;
+  if (!refreshToken) return reply.code(400).send({ error: 'Missing refresh token' });
+
+  try {
+    const payload = app.jwt.verify(refreshToken); // verify token validity
+
+    // Check Firestore if refresh token is still valid
+    const userDoc = await firestore.collection('users').where('email', '==', payload.email)
+    .limit(1)
+    .get();
+    if (userDoc.empty) return reply.code(401).send({ error: 'Invalid token' });
+
+    const user = userDoc.docs[0].data();
+    if (!user.refreshTokens?.includes(refreshToken)) {
+      return reply.code(401).send({ error: 'Refresh token revoked' });
+    }
+
+    const { accessToken, refreshToken: newRefreshToken } = req.server.generateTokens({ ...user });
+
+    // Replace old token with new one (optional: allow multiple devices)
+    await firestore.collection('users').doc(userDoc.docs[0].id).update({
+      refreshTokens: user.refreshTokens.filter(t => t !== refreshToken).concat(newRefreshToken),
+    });
+
+    return { accessToken, refreshToken: newRefreshToken };
+  } catch (err) {
+    console.log(err.message);
+    return reply.code(401).send({ error: 'Invalid refresh token' });
+  }
+}
+
+const signup = async (req, reply) => {
+  const { email, password, role, first_name, last_name } = req.body;
+  if (!email || !password || !role || !first_name || !last_name) return reply.code(400).send({ error: 'All fields required.' });
+
+  const userDoc = await firestore.collection('users')
+    .where('email', '==', email)
+    .limit(1)
+    .get();
+  const existing = userDoc.empty;
+  if (existing === false) return reply.code(400).send({ error: 'User already exists' });
+
+  const roleDoc = await firestore.collection('roles').doc(role).get();
+  if (!roleDoc.exists) return reply.code(400).send({ error: 'Invalid role' });
+
+  const hash = await bcrypt.hash(password, 10);
+
+  await firestore.collection('users').add({
+    email,
+    password: hash,
+    role: roleDoc.data(), 
+    first_name, 
+    last_name,
+    createdAt: new Date().toISOString(),
+    refreshTokens: [],
+  });
+
+  return { ok: true, message: 'User created successfully' };
+}
+
+const logout = (app) => async (req, reply) => {
+  const { refreshToken } = req.body;
+  if (!refreshToken) return reply.code(400).send({ error: 'Missing refresh token' });
+
+  try {
+    const payload = app.jwt.verify(refreshToken);
+    const userDoc = await firestore.collection('users').where('email', '==', payload.email)
+    .limit(1)
+    .get();
+
+    if (userDoc.empty === false) {
+      const user = userDoc.docs[0].data();
+      await firestore.collection('users').doc(userDoc.docs[0].id).update({
+        refreshTokens: (user.refreshTokens || []).filter(t => t !== refreshToken),
+      });
+    }
+    return { ok: true, message: 'Logged out successfully' };
+  } catch {
+    return reply.code(200).send({ ok: true }); // ignore invalid token
+  }
+}
+
+export { login, refreshTokens, signup, logout, twoFASetup, twoFAVerify };
