@@ -1,0 +1,167 @@
+openapi: 3.1.0
+info:
+  title: Vsuite Admin Auth API
+  version: 1.0.0
+paths:
+  /api/auth/login:
+    post:
+      summary: Login with email and password (optionally 2FA)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: user@example.com
+                password:
+                  type: string
+                  example: secret
+                token:
+                  type: string
+                  example: "123456"
+              required: [email, password]
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:
+                    type: string
+                  refreshToken:
+                    type: string
+                  email:
+                    type: string
+        '401':
+          description: Invalid credentials
+
+  /api/auth/register:
+    post:
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+                role:
+                  type: string
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+              required: [email, password, role, first_name, last_name]
+      responses:
+        '200':
+          description: User created
+        '400':
+          description: Validation error
+
+  /api/auth/refresh-token:
+    post:
+      summary: Refresh access token using refresh token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refreshToken:
+                  type: string
+              required: [refreshToken]
+      responses:
+        '200':
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:
+                    type: string
+                  refreshToken:
+                    type: string
+        '401':
+          description: Invalid refresh token
+
+  /api/auth/logout:
+    post:
+      summary: Logout and revoke refresh token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refreshToken:
+                  type: string
+              required: [refreshToken]
+      responses:
+        '200':
+          description: Logged out
+
+  /api/auth/2fa/setup:
+    post:
+      summary: Setup 2FA for user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+              required: [email]
+      responses:
+        '200':
+          description: QR code for 2FA setup
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  qrCodeUrl:
+                    type: string
+
+  /api/auth/2fa/verify:
+    post:
+      summary: Verify 2FA token and enable 2FA
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                token:
+                  type: string
+              required: [email, token]
+      responses:
+        '200':
+          description: 2FA enabled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        '400':
+          description: Invalid token
