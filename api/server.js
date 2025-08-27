@@ -1,6 +1,7 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import formbody from '@fastify/formbody';
+import fastifyMultipart from '@fastify/multipart';
 import jwt from '@fastify/jwt';
 import swagger from '@fastify/swagger';
 import swaggerUI from '@fastify/swagger-ui';
@@ -26,6 +27,7 @@ import { generateTokens } from './libs/utils.js';
 const app = Fastify({ logger: true });
 await app.register(cors, { origin: true });
 await app.register(formbody);
+await app.register(fastifyMultipart);
 await app.register(jwt, { secret: process.env.JWT_SECRET || 'supersecret' });
 app.decorate('generateTokens', (payload) => generateTokens(app, payload));
 app.decorate('authenticate', async function (req, reply) {

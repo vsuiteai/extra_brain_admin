@@ -1,6 +1,7 @@
 import fp from "fastify-plugin";
-import { financialAnalysis } from "../controllers/financialAnalysis.controllers.js";
+import { financialAnalysisJSON, financialAnalysisFiles } from "../controllers/financialAnalysis.controllers.js";
 
 export default fp(async (fastify) => {
-  fastify.post("/api/financial-analysis", financialAnalysis);
+  fastify.post("/api/financial-analysis/json", financialAnalysisJSON);
+  fastify.post("/api/financial-analysis/files", financialAnalysisFiles);
 });
