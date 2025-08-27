@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import formbody from '@fastify/formbody';
@@ -7,8 +8,6 @@ import swagger from '@fastify/swagger';
 import swaggerUI from '@fastify/swagger-ui';
 import fs from 'fs';
 import yaml from 'yaml';
-import dotenv from 'dotenv';
-dotenv.config();
 
 import authRoutes from './routes/auth.routes.js';
 import aiRoutes from './routes/ai.routes.js';
