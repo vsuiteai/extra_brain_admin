@@ -10,6 +10,8 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import authRoutes from './routes/auth.routes.js';
+import aiRoutes from './routes/ai.routes.js';
+import financialAnalysisRoutes from './routes/financialAnalysis.routes.js';
 import employeesRoutes from './routes/employees.js';
 import rolesRoutes from './routes/roles.js';
 import onboardingRoutes from './routes/onboarding.js';
@@ -59,6 +61,8 @@ app.get('/health', async () => ({ ok:true }));
 
 // await app.register(tenant);
 await app.register(authRoutes);
+await app.register(aiRoutes);
+await app.register(financialAnalysisRoutes);
 await app.register(employeesRoutes);
 await app.register(rolesRoutes);
 await app.register(onboardingRoutes);
@@ -69,5 +73,5 @@ await app.register(clientsRoutes);
 await app.register(clientUsersRoutes);
 await app.register(clientPortalRoutes);
 
-const port = process.env.PORT || 8000;
+const port = process.env.PORT || 8080;
 app.listen({ port, host: '0.0.0.0' });
