@@ -8,12 +8,13 @@ import swagger from '@fastify/swagger';
 import swaggerUI from '@fastify/swagger-ui';
 import fs from 'fs';
 import yaml from 'yaml';
+import sgMail from '@sendgrid/mail';
 
 import authRoutes from './routes/auth.routes.js';
 import aiRoutes from './routes/ai.routes.js';
 import financialAnalysisRoutes from './routes/financialAnalysis.routes.js';
-import employeesRoutes from './routes/employees.js';
-import rolesRoutes from './routes/roles.js';
+import employeesRoutes from './routes/employees.routes.js';
+import rolesRoutes from './routes/roles.routes.js';
 import onboardingRoutes from './routes/onboarding.js';
 import metricsRoutes from './routes/metrics.js';
 import auditRoutes from './routes/audit.routes.js';
@@ -24,7 +25,11 @@ import clientPortalRoutes from './routes/clientPortal.js';
 import { generateTokens } from './libs/utils.js';
 
 const app = Fastify({ logger: true });
-await app.register(cors, { origin: true, credentials: true });
+await app.register(cors, {
+  origin: true,
+  credentials: true,
+  methods: '*'
+});
 await app.register(formbody);
 await app.register(fastifyMultipart);
 await app.register(jwt, { secret: process.env.JWT_SECRET || 'supersecret' });
@@ -37,6 +42,9 @@ app.decorate('authenticate', async function (req, reply) {
     reply.code(401).send({ error: 'Unauthorized' });
   }
 });
+
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+app.decorate('sgMail', sgMail);
 
 // 🔹 Load OpenAPI spec
 const file = fs.readFileSync('api/openapi.yml', 'utf8');

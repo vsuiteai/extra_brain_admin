@@ -20,6 +20,7 @@
     "@google-cloud/secret-manager": "^6.1.0",
     "@google-cloud/storage": "^7.17.0",
     "@google/generative-ai": "^0.24.1",
+    "@sendgrid/mail": "^8.1.5",
     "bcryptjs": "^3.0.2",
     "docx": "^9.5.1",
     "dotenv": "^16.4.1",
