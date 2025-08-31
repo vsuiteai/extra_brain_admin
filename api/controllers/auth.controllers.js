@@ -33,13 +33,8 @@ const login = async (req, reply) => {
 
   const { accessToken, refreshToken } = req.server.generateTokens({ ...user });
 
-  // Persist refresh token (could be array for multi-device support)
-  await firestore.collection('users').doc(userDoc.docs[0].id).update({
-    refreshTokens: [...(user.refreshTokens || []), refreshToken],
-  });
-
   return { ...user, accessToken, refreshToken };
-}
+};
 
 const twoFASetup = async (req, reply) => {
   const { email } = req.body;
@@ -61,7 +56,7 @@ const twoFASetup = async (req, reply) => {
   const responseUrl = await QRCode.toDataURL(secret.otpauth_url);
 
   return { qrCodeUrl: responseUrl };
-}
+};
 
 const twoFAVerify = async (req, reply) => {
   const { email, token } = req.body;
@@ -88,7 +83,7 @@ const twoFAVerify = async (req, reply) => {
   await firestore.collection('users').doc(userDoc.docs[0].id).update({ twoFAEnabled: true });
 
   return { success: true, message: '2FA enabled successfully' };
-}
+};
 
 const refreshTokens = (app) => async (req, reply) => {
   const { refreshToken } = req.body;
@@ -120,7 +115,7 @@ const refreshTokens = (app) => async (req, reply) => {
     console.log(err.message);
     return reply.code(401).send({ error: 'Invalid refresh token' });
   }
-}
+};
 
 const signup = async (req, reply) => {
   const { email, password, role, first_name, last_name } = req.body;
@@ -149,7 +144,7 @@ const signup = async (req, reply) => {
   });
 
   return { ok: true, message: 'User created successfully' };
-}
+};
 
 const logout = (app) => async (req, reply) => {
   const { refreshToken } = req.body;
@@ -171,6 +166,6 @@ const logout = (app) => async (req, reply) => {
   } catch {
     return reply.code(200).send({ ok: true }); // ignore invalid token
   }
-}
+};
 
 export { login, refreshTokens, signup, logout, twoFASetup, twoFAVerify };

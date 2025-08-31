@@ -24,7 +24,7 @@ import clientPortalRoutes from './routes/clientPortal.js';
 import { generateTokens } from './libs/utils.js';
 
 const app = Fastify({ logger: true });
-await app.register(cors, { origin: true });
+await app.register(cors, { origin: true, credentials: true });
 await app.register(formbody);
 await app.register(fastifyMultipart);
 await app.register(jwt, { secret: process.env.JWT_SECRET || 'supersecret' });
@@ -33,6 +33,7 @@ app.decorate('authenticate', async function (req, reply) {
   try {
     await req.jwtVerify();
   } catch (err) {
+    console.log(err);
     reply.code(401).send({ error: 'Unauthorized' });
   }
 });
