@@ -44,4 +44,11 @@ const setEmployeePermissions = async (req, reply) => {
   return reply.send({ ok:true });
 };
 
-export { getRoles, createRole, updateRole, getEmployeePermissions, setEmployeePermissions };
+const getUsersWithRole = async (req, reply) => {
+  const { roleId } = req.params;
+  const usersSnapshot = await col.users().where('role.id', '==', roleId).get();
+  const users = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  return reply.send({ users });
+};
+
+export { getRoles, createRole, updateRole, getEmployeePermissions, setEmployeePermissions, getUsersWithRole };
