@@ -6,7 +6,24 @@ import { Firestore } from '@google-cloud/firestore';
 const firestore = new Firestore();
 
 const login = async (req, reply) => {
-  const { email, password, token } = req.body;
+  const { email, password } = req.body;
+
+  const userDoc = await firestore.collection('users')
+    .where('email', '==', email)
+    .where('is_admin', '==', true)
+    .limit(1)
+    .get();
+  if (userDoc.empty) return reply.code(401).send({ error: 'Invalid email or password' });
+
+  const user = userDoc.docs[0].data();
+  const isValid = await bcrypt.compare(password, user.password);
+  if (!isValid) return reply.code(401).send({ error: 'Invalid email or password' });
+
+  return reply.code(200).send({ ok: true });
+};
+
+const verifyTwoFAToken = async (req, reply) => {
+  const { token, email } = req.body;
 
   const userDoc = await firestore.collection('users')
     .where('email', '==', email)
@@ -15,8 +32,6 @@ const login = async (req, reply) => {
   if (userDoc.empty) return reply.code(401).send({ error: 'Invalid email or password' });
 
   const user = userDoc.docs[0].data();
-  const isValid = await bcrypt.compare(password, user.password);
-  if (!isValid) return reply.code(401).send({ error: 'Invalid email or password' });
 
   if (user.twoFAEnabled) {
     if (!token) return reply.code(400).send({ error: '2FA token required' });
@@ -31,14 +46,9 @@ const login = async (req, reply) => {
     if (!valid2FA) return reply.code(401).send({ error: 'Invalid 2FA token' });
   }
 
-  const { accessToken, refreshToken } = req.server.generateTokens({ ...user });
+  const { accessToken, refreshToken } = req.server.generateTokens({ id: userDoc.docs[0].id, fullName: user.fullName, email });
 
-  // Persist refresh token (could be array for multi-device support)
-  await firestore.collection('users').doc(userDoc.docs[0].id).update({
-    refreshTokens: [...(user.refreshTokens || []), refreshToken],
-  });
-
-  return { ...user, accessToken, refreshToken };
+  return reply.code(200).send({ ...user, accessToken, refreshToken });
 }
 
 const twoFASetup = async (req, reply) => {
@@ -61,7 +71,7 @@ const twoFASetup = async (req, reply) => {
   const responseUrl = await QRCode.toDataURL(secret.otpauth_url);
 
   return { qrCodeUrl: responseUrl };
-}
+};
 
 const twoFAVerify = async (req, reply) => {
   const { email, token } = req.body;
@@ -88,7 +98,7 @@ const twoFAVerify = async (req, reply) => {
   await firestore.collection('users').doc(userDoc.docs[0].id).update({ twoFAEnabled: true });
 
   return { success: true, message: '2FA enabled successfully' };
-}
+};
 
 const refreshTokens = (app) => async (req, reply) => {
   const { refreshToken } = req.body;
@@ -104,23 +114,15 @@ const refreshTokens = (app) => async (req, reply) => {
     if (userDoc.empty) return reply.code(401).send({ error: 'Invalid token' });
 
     const user = userDoc.docs[0].data();
-    if (!user.refreshTokens?.includes(refreshToken)) {
-      return reply.code(401).send({ error: 'Refresh token revoked' });
-    }
 
-    const { accessToken, refreshToken: newRefreshToken } = req.server.generateTokens({ ...user });
+    const { accessToken, refreshToken: newRefreshToken } = req.server.generateTokens({ id: userDoc.docs[0].id, fullName: user.fullName, email: user.email });
 
-    // Replace old token with new one (optional: allow multiple devices)
-    await firestore.collection('users').doc(userDoc.docs[0].id).update({
-      refreshTokens: user.refreshTokens.filter(t => t !== refreshToken).concat(newRefreshToken),
-    });
-
-    return { accessToken, refreshToken: newRefreshToken };
+    return { id: userDoc.docs[0].id, ...user, accessToken, refreshToken: newRefreshToken };
   } catch (err) {
     console.log(err.message);
     return reply.code(401).send({ error: 'Invalid refresh token' });
   }
-}
+};
 
 const signup = async (req, reply) => {
   const { email, password, role, first_name, last_name } = req.body;
@@ -141,36 +143,14 @@ const signup = async (req, reply) => {
   await firestore.collection('users').add({
     email,
     password: hash,
-    role: roleDoc.data(), 
-    first_name, 
+    role: roleDoc.data(),
+    is_admin: true,
+    first_name,
     last_name,
     createdAt: new Date().toISOString(),
-    refreshTokens: [],
   });
 
   return { ok: true, message: 'User created successfully' };
-}
+};
 
-const logout = (app) => async (req, reply) => {
-  const { refreshToken } = req.body;
-  if (!refreshToken) return reply.code(400).send({ error: 'Missing refresh token' });
-
-  try {
-    const payload = app.jwt.verify(refreshToken);
-    const userDoc = await firestore.collection('users').where('email', '==', payload.email)
-    .limit(1)
-    .get();
-
-    if (userDoc.empty === false) {
-      const user = userDoc.docs[0].data();
-      await firestore.collection('users').doc(userDoc.docs[0].id).update({
-        refreshTokens: (user.refreshTokens || []).filter(t => t !== refreshToken),
-      });
-    }
-    return { ok: true, message: 'Logged out successfully' };
-  } catch {
-    return reply.code(200).send({ ok: true }); // ignore invalid token
-  }
-}
-
-export { login, refreshTokens, signup, logout, twoFASetup, twoFAVerify };
+export { login, refreshTokens, signup, twoFASetup, twoFAVerify, verifyTwoFAToken };

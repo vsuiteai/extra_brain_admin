@@ -11,7 +11,7 @@ export async function generatePDF(insights) {
 
   const doc = new PDFdocument();
   const chunks = [];
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     doc.on("data", (chunk) => chunks.push(chunk));
     doc.on("end", async () => {
       const pdfBuffer = Buffer.concat(chunks);
