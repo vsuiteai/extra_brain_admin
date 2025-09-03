@@ -3,6 +3,7 @@ import {
   createRole,
   getEmployeePermissions,
   getRoles,
+  getUsersWithRole,
   setEmployeePermissions,
   updateRole
 } from '../controllers/roles.controllers.js';
@@ -26,4 +27,6 @@ export default fp(async (fastify) => {
   fastify.get('/api/employees/:id/perms', getEmployeePermissions);
 
   fastify.put('/api/employees/:id/perms', setEmployeePermissions);
+
+  fastify.get('/api/roles/:roleId/users', { preHandler: [fastify.authenticate] }, getUsersWithRole);
 });

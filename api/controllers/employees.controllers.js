@@ -1,7 +1,9 @@
 import { col } from '../firestore.js';
 
 const getEmployees = async (req, reply) => {
-  const { dept, status, role, searchString, lastDateJoined, limit } = req.query || {};
+  const { dept, status, role, searchString, page = 1, limit = 10, lastDocId } = req.query || {};
+  const pageSize = parseInt(limit);
+  const currentPage = parseInt(page);
 
   let query = col.employees();
   if (dept) {
@@ -17,17 +19,29 @@ const getEmployees = async (req, reply) => {
     query = query.where('name', '>=', searchString).where('name', '<=', searchString + '\uf8ff');
   }
 
-  const employees = query.orderBy('dateJoined', 'desc').limit(limit || 10);
+  query = query.orderBy('dateJoined', 'desc');
 
-  if (lastDateJoined) {
-    query = query.startAfter(lastDateJoined);
+  // If we're not on the first page and have a last document ID, start after it
+  if (currentPage > 1 && lastDocId) {
+    const lastDoc = await col.employees().doc(lastDocId).get();
+    if (lastDoc.exists) {
+      query = query.startAfter(lastDoc);
+    }
   }
 
-  const snapshot = await employees.get();
+  const snapshot = await query.limit(pageSize).get();
+  const snapshotCount = await query.count().get();
 
-  const snapshotCount = await employees.count().get();
-
-  reply.send({ total: snapshotCount.data().count, data: snapshot.docs.map(doc => doc.data()) });
+  reply.send({
+    pagination: {
+      total: snapshotCount.data().count,
+      page: currentPage,
+      limit: pageSize,
+      pages: Math.ceil(snapshotCount.data().count / pageSize),
+      lastDocId: snapshot.docs.length > 0 ? snapshot.docs[snapshot.docs.length - 1].id : null
+    },
+    data: snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+  });
 }
 
 const inviteEmployee = async (req, reply) => {

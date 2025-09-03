@@ -13,5 +13,6 @@ export const col = {
   sessions:      () => db.collection('sessions'),
   clients:       () => db.collection('clients'),
   clientUsers:   () => db.collection('client_users'),
-  tickets:       () => db.collection('tickets')
+  tickets:       () => db.collection('tickets'),
+  users:         () => db.collection('users')
 };

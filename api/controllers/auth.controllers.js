@@ -46,7 +46,7 @@ const verifyTwoFAToken = async (req, reply) => {
     if (!valid2FA) return reply.code(401).send({ error: 'Invalid 2FA token' });
   }
 
-  const { accessToken, refreshToken } = req.server.generateTokens({ ...user });
+  const { accessToken, refreshToken } = req.server.generateTokens({ id: userDoc.docs[0].id, fullName: user.fullName, email });
 
   return reply.code(200).send({ ...user, accessToken, refreshToken });
 }
@@ -115,9 +115,9 @@ const refreshTokens = (app) => async (req, reply) => {
 
     const user = userDoc.docs[0].data();
 
-    const { accessToken, refreshToken: newRefreshToken } = req.server.generateTokens({ ...user });
+    const { accessToken, refreshToken: newRefreshToken } = req.server.generateTokens({ id: userDoc.docs[0].id, fullName: user.fullName, email: user.email });
 
-    return { accessToken, refreshToken: newRefreshToken };
+    return { id: userDoc.docs[0].id, ...user, accessToken, refreshToken: newRefreshToken };
   } catch (err) {
     console.log(err.message);
     return reply.code(401).send({ error: 'Invalid refresh token' });
