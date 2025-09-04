@@ -153,4 +153,30 @@ const signup = async (req, reply) => {
   return { ok: true, message: 'User created successfully' };
 };
 
-export { login, refreshTokens, signup, twoFASetup, twoFAVerify, verifyTwoFAToken };
+const me = async (req, reply) => {
+  try {
+    const decoded = req.user;
+    const email = decoded.email;
+    if (!email) {
+      return reply.code(401).send({ error: 'Invalid token' });
+    }
+    const userDoc = await firestore.collection('users')
+      .where('email', '==', email)
+      .limit(1)
+      .get();
+    if (userDoc.empty) {
+      return reply.code(404).send({ error: 'User not found' });
+    }
+    const user = userDoc.docs[0].data();
+    const userId = userDoc.docs[0].id;
+    // Don't return password
+    // eslint-disable-next-line no-unused-vars
+    const { password, ...userInfo } = user;
+    return { id: userId, ...userInfo };
+  } catch (err) {
+    console.log(err.message);
+    return reply.code(401).send({ error: 'Invalid or expired token' });
+  }
+};
+
+export { login, refreshTokens, signup, twoFASetup, twoFAVerify, verifyTwoFAToken, me };

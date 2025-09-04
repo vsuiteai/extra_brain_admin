@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import fastifyCookie from '@fastify/cookie'
 import formbody from '@fastify/formbody';
 import fastifyMultipart from '@fastify/multipart';
 import jwt from '@fastify/jwt';
@@ -11,6 +12,7 @@ import yaml from 'yaml';
 import sgMail from '@sendgrid/mail';
 
 import authRoutes from './routes/auth.routes.js';
+import companyRoutes from './routes/companies.routes.js';
 import aiRoutes from './routes/ai.routes.js';
 import financialAnalysisRoutes from './routes/financialAnalysis.routes.js';
 import employeesRoutes from './routes/employees.routes.js';
@@ -32,13 +34,33 @@ await app.register(cors, {
 });
 await app.register(formbody);
 await app.register(fastifyMultipart);
+await app.register(fastifyCookie, {
+  secret: process.env.COOKIE_SECRET,
+  hook: 'onRequest',
+  domain: '.vsuite.ai'
+});
 await app.register(jwt, { secret: process.env.JWT_SECRET || 'supersecret' });
 app.decorate('generateTokens', (payload) => generateTokens(app, payload));
 app.decorate('authenticate', async function (req, reply) {
   try {
-    await req.jwtVerify();
+    let token;
+
+    if (req.cookies?.access_token) {
+      token = req.cookies.access_token;
+    }
+
+    else if (req.headers.authorization?.startsWith('Bearer ')) {
+      token = req.headers.authorization.split(' ')[1];
+    }
+
+    if (!token) {
+      return reply.code(401).send({ error: 'No token provided' });
+    }
+
+    const decoded = await req.server.jwt.verify(token);
+    req.user = decoded;
   } catch (err) {
-    console.log(err);
+    console.error('Authentication error:', err);
     reply.code(401).send({ error: 'Unauthorized' });
   }
 });
@@ -82,6 +104,7 @@ await app.register(meRoutes);
 await app.register(clientsRoutes);
 await app.register(clientUsersRoutes);
 await app.register(clientPortalRoutes);
+await app.register(companyRoutes);
 
 const port = process.env.PORT || 8080;
 app.listen({ port, host: '0.0.0.0' });

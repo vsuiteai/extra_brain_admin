@@ -5,7 +5,10 @@ import {
   getRoles,
   getUsersWithRole,
   setEmployeePermissions,
-  updateRole
+  updateRole,
+  getPermissions,
+  createPermission,
+  updatePermission
 } from '../controllers/roles.controllers.js';
 
 export default fp(async (fastify) => {
@@ -15,18 +18,15 @@ export default fp(async (fastify) => {
 
   fastify.put('/api/roles/:id', { preHandler: [fastify.authenticate] }, updateRole);
 
-  fastify.get('/api/permissions/matrix', async () => {
-    return {
-      codes: [
-        'users.view','users.edit','roles.manage','onboarding.edit','tickets.edit','exports.run','admin.console',
-        'client.portal','client.tickets','client.onboarding'
-      ]
-    };
-  });
+  fastify.get('/api/permissions', { preHandler: [fastify.authenticate] }, getPermissions);
 
-  fastify.get('/api/employees/:id/perms', getEmployeePermissions);
+  fastify.post('/api/permissions/:permissionName', { preHandler: [fastify.authenticate] }, createPermission);
 
-  fastify.put('/api/employees/:id/perms', setEmployeePermissions);
+  fastify.put('/api/permissions/:permissionName', { preHandler: [fastify.authenticate] }, updatePermission);
+
+  fastify.get('/api/employees/:id/perms', { preHandler: [fastify.authenticate] }, getEmployeePermissions);
+
+  fastify.put('/api/employees/:id/perms', { preHandler: [fastify.authenticate] }, setEmployeePermissions);
 
   fastify.get('/api/roles/:roleId/users', { preHandler: [fastify.authenticate] }, getUsersWithRole);
 });

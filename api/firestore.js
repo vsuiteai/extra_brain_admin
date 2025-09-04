@@ -14,5 +14,7 @@ export const col = {
   clients:       () => db.collection('clients'),
   clientUsers:   () => db.collection('client_users'),
   tickets:       () => db.collection('tickets'),
-  users:         () => db.collection('users')
+  users:         () => db.collection('users'),
+  permissions:   () => db.collection('permissions'),
+  companies:     () => db.collection('companies')
 };
