@@ -31,6 +31,7 @@ const createRole = async (req, reply) => {
 const updateRole = async (req, reply) => {
   const { id } = req.params;
   const { name, description, permissions } = req.body;
+  const user = req.user;
 
   if (!name || !description || !permissions) {
     return reply.status(400).send({ error: 'Missing required fields' });
@@ -40,7 +41,13 @@ const updateRole = async (req, reply) => {
     return reply.status(400).send({ error: 'Permissions must be an array' });
   }
 
-  await col.roles().doc(id).set({ name, description, permissions }, { merge: true });
+  await col.roles().doc(id).set({
+    name,
+    description,
+    permissions,
+    updatedBy: user,
+    updatedAt: new Date().toISOString()
+  }, { merge: true });
 
   return reply.send({ id });
 };
@@ -108,4 +115,45 @@ const getUsersWithRole = async (req, reply) => {
   });
 };
 
-export { getRoles, createRole, updateRole, getEmployeePermissions, setEmployeePermissions, getUsersWithRole };
+const getPermissions = async (req, reply) => {
+  const permissions = await col.permissions().get();
+  if (permissions.empty) return reply.code(404).send({ error:'Not found' });
+
+  return reply.send(permissions.docs.map(doc => ({ [doc.id]: doc.data() })));
+}
+
+const createPermission = async (req, reply) => {
+  const { permissionName } = req.params;
+  const { obj, key } = req.body;
+
+  if (!obj) {
+    return reply.status(400).send({ error: 'Missing required fields' });
+  }
+
+  await col.permissions().doc(permissionName).set({ [key]: obj }, { merge: true });
+  return reply.status(201).send({ ok: true });
+}
+
+const updatePermission = async (req, reply) => {
+  const { permissionName } = req.params;
+  const { obj, key } = req.body;
+
+  if (!obj) {
+    return reply.status(400).send({ error: 'Missing required fields' });
+  }
+
+  await col.permissions().doc(permissionName).update({ [key]: obj });
+  return reply.status(201).send({ ok: true });
+}
+
+export {
+  getRoles,
+  createRole,
+  updateRole,
+  getEmployeePermissions,
+  setEmployeePermissions,
+  getUsersWithRole,
+  getPermissions,
+  createPermission,
+  updatePermission
+};
