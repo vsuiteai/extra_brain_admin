@@ -14,6 +14,7 @@ import sgMail from '@sendgrid/mail';
 import authRoutes from './routes/auth.routes.js';
 import companyRoutes from './routes/companies.routes.js';
 import aiRoutes from './routes/ai.routes.js';
+import userRoutes from './routes/user.routes.js';
 import financialAnalysisRoutes from './routes/financialAnalysis.routes.js';
 import employeesRoutes from './routes/employees.routes.js';
 import rolesRoutes from './routes/roles.routes.js';
@@ -105,6 +106,7 @@ await app.register(clientsRoutes);
 await app.register(clientUsersRoutes);
 await app.register(clientPortalRoutes);
 await app.register(companyRoutes);
+await app.register(userRoutes);
 
 const port = process.env.PORT || 8080;
 app.listen({ port, host: '0.0.0.0' });

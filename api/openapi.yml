@@ -136,6 +136,128 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /api/user/{userId}:
+    get:
+      security:
+        - bearerAuth: []
+      summary: Get user by ID
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+          description: User ID
+      responses:
+        '200':
+          description: User details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  fullName:
+                    type: string
+                  email:
+                    type: string
+                  avatar:
+                    type: string
+                    nullable: true
+                  jobTitle:
+                    type: string
+                    nullable: true
+                  department:
+                    type: string
+                    nullable: true
+                  bio:
+                    type: string
+                    nullable: true
+                  phoneNumber:
+                    type: string
+                    nullable: true
+                  timeZone:
+                    type: string
+                    nullable: true
+                  linkedinUrl:
+                    type: string
+                    nullable: true
+                  guthubUrl:
+                    type: string
+                    nullable: true
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/user/search:
+    get:
+      security:
+        - bearerAuth: []
+      summary: Search users by name
+      parameters:
+        - in: query
+          name: searchString
+          required: true
+          schema:
+            type: string
+          description: Search string to match against user full names
+      responses:
+        '200':
+          description: List of matching users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    fullName:
+                      type: string
+                    email:
+                      type: string
+                    avatar:
+                      type: string
+                      nullable: true
+                    jobTitle:
+                      type: string
+                      nullable: true
+                    department:
+                      type: string
+                      nullable: true
+                    bio:
+                      type: string
+                      nullable: true
+                    phoneNumber:
+                      type: string
+                      nullable: true
+                    timeZone:
+                      type: string
+                      nullable: true
+                    linkedinUrl:
+                      type: string
+                      nullable: true
+                    guthubUrl:
+                      type: string
+                      nullable: true
+                    createdAt:
+                      type: string
+                      format: date-time
+                    updatedAt:
+                      type: string
+                      format: date-time
+
   /companies:
     get:
       security:
