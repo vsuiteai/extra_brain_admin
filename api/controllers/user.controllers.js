@@ -70,5 +70,21 @@ const updateProfile = async (req, reply) => {
   return reply.code(200).send({ ok: true });
 }
 
+const getUser = async (req, reply) => {
+  const { userId } = req.params;
 
-export { updateProfilePicture, updateProfile }
+  const userDoc = await col.users().doc(userId).get();
+  if (!userDoc.exists) return reply.code(404).send({ error: 'User not found' });
+
+  return reply.code(200).send({ id: userDoc.id, ...userDoc.data() });
+}
+
+const searchUsers = async (req, reply) => {
+  const { searchString } = req.query;
+
+  const users = await col.users().where('fullName', '>=', searchString).where('fullName', '<=', searchString + '\uf8ff').get();
+  return reply.code(200).send(users.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+}
+
+
+export { updateProfilePicture, updateProfile, getUser, searchUsers }
