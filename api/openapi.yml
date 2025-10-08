@@ -62,6 +62,26 @@ components:
           type: array
           items:
             type: string
+    Client:
+      type: object
+      properties:
+        id:
+          type: string
+        roleName:
+          type: string
+        email:
+          type: string
+        fullName:
+          type: string
+        avatar:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
 
 security:
   - bearerAuth: []
@@ -257,6 +277,65 @@ paths:
                     updatedAt:
                       type: string
                       format: date-time
+
+  /api/clients:
+    get:
+      security:
+        - bearerAuth: []
+      summary: Get list of clients
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+          description: Number of clients to return
+        - in: query
+          name: lastDoc
+          schema:
+            type: string
+          description: Last document ID for pagination
+      responses:
+        '200':
+          description: List of clients
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  clients:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Client'
+                  lastDoc:
+                    type: string
+                    nullable: true
+
+  /api/clients/{id}/profile:
+    get:
+      security:
+        - bearerAuth: []
+      summary: Get client profile by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: Client ID
+      responses:
+        '200':
+          description: Client profile details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+        '404':
+          description: Client not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /companies:
     get:

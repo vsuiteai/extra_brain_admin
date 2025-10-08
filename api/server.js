@@ -22,8 +22,7 @@ import onboardingRoutes from './routes/onboarding.js';
 import metricsRoutes from './routes/metrics.js';
 import auditRoutes from './routes/audit.routes.js';
 import meRoutes from './routes/me.js';
-import clientsRoutes from './routes/clients.js';
-import clientUsersRoutes from './routes/clientUsers.js';
+import clientsRoutes from './routes/client.routes.js';
 import clientPortalRoutes from './routes/clientPortal.js';
 import { generateTokens } from './libs/utils.js';
 
@@ -103,7 +102,6 @@ await app.register(metricsRoutes);
 await app.register(auditRoutes);
 await app.register(meRoutes);
 await app.register(clientsRoutes);
-await app.register(clientUsersRoutes);
 await app.register(clientPortalRoutes);
 await app.register(companyRoutes);
 await app.register(userRoutes);
