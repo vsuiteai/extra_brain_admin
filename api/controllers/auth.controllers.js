@@ -44,6 +44,8 @@ const verifyTwoFAToken = async (req, reply) => {
     });
 
     if (!valid2FA) return reply.code(401).send({ error: 'Invalid 2FA token' });
+  } else {
+    return reply.code(401).send({ error: '2FA is not enabled' });
   }
 
   const { accessToken, refreshToken } = req.server.generateTokens({ id: userDoc.docs[0].id, fullName: user.fullName, email });
