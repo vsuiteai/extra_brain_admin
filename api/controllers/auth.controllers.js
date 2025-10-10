@@ -50,7 +50,25 @@ const verifyTwoFAToken = async (req, reply) => {
 
   const { accessToken, refreshToken } = req.server.generateTokens({ id: userDoc.docs[0].id, fullName: user.fullName, email });
 
-  return reply.code(200).send({ ...user, accessToken, refreshToken });
+  const { password, twoFASecret, twoFAEnabled, ...safeUser } = user;
+
+  return reply
+    .setCookie('access_token', accessToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      path: '/',
+      maxAge: 15 * 60,
+    })
+    .setCookie('refresh_token', refreshToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      path: '/',
+      maxAge: 7 * 24 * 60 * 60,
+    })
+    .code(200)
+    .send({ ...safeUser, id: userDoc.docs[0].id });
 }
 
 const twoFASetup = async (req, reply) => {
