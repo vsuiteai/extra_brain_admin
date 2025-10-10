@@ -19,7 +19,7 @@ const login = async (req, reply) => {
   const isValid = await bcrypt.compare(password, user.password);
   if (!isValid) return reply.code(401).send({ error: 'Invalid email or password' });
 
-  return reply.code(200).send({ ok: true });
+  return reply.code(200).send({ ok: true, twoFAEnabled: user.twoFAEnabled });
 };
 
 const verifyTwoFAToken = async (req, reply) => {
